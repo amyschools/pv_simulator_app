@@ -3,10 +3,9 @@ import csv
 import datetime
 
 
-connection = pika.BlockingConnection(
-    pika.ConnectionParameters(host='localhost'))
+connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
 channel = connection.channel()
-channel.queue_declare(queue='task_queue', durable=True)
+channel.queue_declare(queue="task_queue", durable=True)
 
 
 def write_file(message_body):
@@ -18,19 +17,23 @@ def write_file(message_body):
     :param message body: string with the randomly generated watt amount
     :return: csv file object
     """
-    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     meter_value_in_kilowatts = int(message_body) / 1000
 
-    with open('output_file.csv', 'a') as f:
-        writer = csv.DictWriter(f, fieldnames=["timestamp", "meter_value", "pv_power_value", "power_sum"])
+    with open("output_file.csv", "a") as f:
+        writer = csv.DictWriter(
+            f, fieldnames=["timestamp", "meter_value", "pv_power_value", "power_sum"]
+        )
         if f.tell() == 0:  # only write header row once, at position 0
             writer.writeheader()
-        writer.writerow({
-                         "timestamp": timestamp,
-                         "meter_value": f"{message_body} watts",
-                         "pv_power_value": f"{meter_value_in_kilowatts} kilowatts",
-                         "power_sum": sum([int(message_body), meter_value_in_kilowatts])
-                         })
+        writer.writerow(
+            {
+                "timestamp": timestamp,
+                "meter_value": f"{message_body} watts",
+                "pv_power_value": f"{meter_value_in_kilowatts} kilowatts",
+                "power_sum": sum([int(message_body), meter_value_in_kilowatts]),
+            }
+        )
 
 
 def callback(ch, method, properties, body):
@@ -42,6 +45,6 @@ def callback(ch, method, properties, body):
 
 # basic_qos limits the unacknowledged deliveries to 1
 channel.basic_qos(prefetch_count=1)
-channel.basic_consume(queue='task_queue', on_message_callback=callback)
+channel.basic_consume(queue="task_queue", on_message_callback=callback)
 
 channel.start_consuming()
